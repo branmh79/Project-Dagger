@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for
 import pandas as pd
 from io import StringIO
 from firebase_admin import db
@@ -12,6 +12,8 @@ def index():
     return render_template('index.html')
 
 # Upload CSV files and store data in Firebase with timing and entry count
+from flask import redirect, url_for
+
 @main.route('/upload_csvs', methods=['POST'])
 def upload_csvs():
     start_time = time.time()  # Start the timer
@@ -43,9 +45,9 @@ def upload_csvs():
     end_time = time.time()  # Stop the timer
     duration = end_time - start_time  # Calculate the duration in seconds
 
-    return jsonify({
-        'message': f'{duration:.2f} seconds for {total_entries} total entries'
-    }), 200
+    # Redirect to the finished page with the calculated values
+    return redirect(url_for('main.finished', time_taken=duration, entries=total_entries))
+
 
 # Helper function to save data to Firebase and count entries
 def save_to_firebase(data, node_name):
@@ -106,5 +108,11 @@ def save_to_firebase(data, node_name):
         entry_count += 1
 
     return entry_count
+
+@main.route('/finished')
+def finished():
+    time_taken = request.args.get('time_taken', 0, type=float)  # Retrieve time from query params
+    entries = request.args.get('entries', 0, type=int)  # Retrieve entries from query params
+    return render_template('finished.html', time_taken=f'{time_taken:.2f}', entries=entries)
 
 

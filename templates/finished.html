@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Processing Complete</title>
+    <style>
+        /* Global Styles */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #6A0DAD, #2C3E50);
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* Main Container */
+        .container {
+            background: #fff;
+            color: #333;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .logo {
+            width: 200px;
+            height: auto;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: #6A0DAD;
+        }
+
+        p {
+            font-size: 16px;
+            margin-bottom: 30px;
+            color: #555;
+        }
+
+        .result {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2C3E50;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 12px 24px;
+            background-color: #2C3E50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        button:hover {
+            background-color: #6A0DAD;
+            transform: scale(1.05);
+        }
+
+        footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Project Dagger Logo" class="logo">
+        <h1>Processing Complete</h1>
+        <p>Your CSV files have been successfully processed.</p>
+        <div class="result">
+            Took <span>{{ time_taken }}</span> seconds for <span>{{ entries }}</span> total entries.
+        </div>
+        <button onclick="window.location.href='/';">Return to Home</button>
+        <footer>&copy; 2024 Foxtrot Company. All Rights Reserved.</footer>
+    </div>
+</body>
+</html>
