@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Dagger</title>
+    <style>
+        /* Global Styles */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #6A0DAD, #2C3E50);
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* Main Container */
+        .container {
+            background: #fff;
+            color: #333;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .logo {
+            width: 200px;
+            height: auto;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: #6A0DAD;
+        }
+
+        p {
+            font-size: 16px;
+            margin-bottom: 30px;
+            color: #555;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .file-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-input-wrapper input[type="file"] {
+            display: none;
+        }
+
+        .file-input-wrapper button.upload-btn {
+            padding: 8px 16px;
+            background-color: #6A0DAD;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+        }
+
+        .file-input-wrapper button.upload-btn:hover {
+            background-color: #2C3E50;
+        }
+
+        .file-name {
+            font-size: 14px;
+            color: #333;
+        }
+
+        .remove-btn {
+            background: none;
+            border: none;
+            color: #E74C3C;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .remove-btn:hover {
+            text-decoration: underline;
+        }
+
+        .submit-button {
+            padding: 12px 24px;
+            background-color: #2C3E50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        .submit-button:hover {
+            background-color: #6A0DAD;
+            transform: scale(1.05);
+        }
+
+        footer {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #777;
+        }
+
+        /* Dim Screen and Spinner */
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column; /* Stack spinner and text vertically */
+            justify-content: center;
+            align-items: center;
+            visibility: hidden;
+        }
+
+        .overlay.active {
+            visibility: visible;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #fff;
+            border-radius: 50%;
+            width: 60px; /* Larger spinner */
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px; /* Add space between spinner and text */
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .spinner-text {
+            margin-top: 10px;
+            color: #fff;
+            font-size: 24px; /* Larger text */
+            font-weight: bold; /* Bolded text */
+            text-align: center;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="Project Dagger Logo" class="logo">
+        <h1>Welcome to Project Dagger</h1>
+        <p>Upload your CSV files below to start processing data. Ensure both files are valid and in the correct format.</p>
+        <form action="/upload_csvs" method="POST" enctype="multipart/form-data" onsubmit="showOverlay()">
+            <div class="file-input-wrapper">
+                <button type="button" class="upload-btn" onclick="document.getElementById('csv1').click();">Upload All Records CSV</button>
+                <input type="file" name="csv1" id="csv1" onchange="updateFileName('csv1-name', this.files)">
+                <span id="csv1-name" class="file-name">No file selected</span>
+                <button type="button" class="remove-btn" onclick="removeFile('csv1', 'csv1-name')">X</button>
+            </div>
+            <div class="file-input-wrapper">
+                <button type="button" class="upload-btn" onclick="document.getElementById('csv2').click();">Upload VA Loan Records CSV</button>
+                <input type="file" name="csv2" id="csv2" onchange="updateFileName('csv2-name', this.files)">
+                <span id="csv2-name" class="file-name">No file selected</span>
+                <button type="button" class="remove-btn" onclick="removeFile('csv2', 'csv2-name')">X</button>
+            </div>
+            <button type="submit" class="submit-button">Submit Files</button>
+        </form>
+        <footer>&copy; 2024 Foxtrot Company. All Rights Reserved.</footer>
+    </div>
+
+    <!-- Overlay -->
+    <div class="overlay" id="overlay">
+        <div class="spinner"></div>
+        <p class="spinner-text">Your results are generating.</p>
+    </div>
+
+    <script>
+        function updateFileName(elementId, files) {
+            const fileNameElement = document.getElementById(elementId);
+            if (files.length > 0) {
+                fileNameElement.textContent = files[0].name;
+            } else {
+                fileNameElement.textContent = "No file selected";
+            }
+        }
+
+        function removeFile(inputId, nameId) {
+            const fileInput = document.getElementById(inputId);
+            const fileNameElement = document.getElementById(nameId);
+            fileInput.value = ""; // Clear the file input
+            fileNameElement.textContent = "No file selected"; // Reset the file name display
+        }
+
+        function showOverlay() {
+            document.getElementById('overlay').classList.add('active');
+        }
+    </script>
+</body>
+</html>
