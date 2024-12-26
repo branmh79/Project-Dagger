@@ -54,9 +54,29 @@
             margin-bottom: 20px;
         }
 
+        .button-container {
+            display: flex;
+            flex-direction: column; /* Stack buttons vertically */
+            align-items: center; /* Center buttons horizontally */
+            gap: 10px; /* Add spacing between buttons */
+        }
+
         button {
             padding: 12px 24px;
             background-color: #2C3E50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        downloadButton {
+            padding: 12px 24px;
+            background-color: #227290;
             color: white;
             border: none;
             border-radius: 8px;
@@ -85,9 +105,13 @@
         <h1>Processing Complete</h1>
         <p>Your CSV files have been successfully processed.</p>
         <div class="result">
-            Took <span>{{ time_taken }}</span> seconds for <span>{{ entries }}</span> total entries.
+            Took <span>{{ time_taken }}</span> seconds for <span>{{ total_entries }}</span> unique entries.
         </div>
-        <button onclick="window.location.href='/';">Return to Home</button>
+        <div class="button-container">
+            <downloadButton onclick="window.location.href='/download_current_va_csv';">Download VAOwnedProperties CSV</downloadButton>
+            <button onclick="document.getElementById('wipeForm').submit();">Return to Home (Wipes Database)</button>
+            <form id="wipeForm" action="/wipe_database" method="POST" style="display:none;"></form>            
+        </div>
         <footer>&copy; 2024 Foxtrot Company. All Rights Reserved.</footer>
     </div>
 </body>
