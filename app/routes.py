@@ -3,6 +3,7 @@ import pandas as pd
 from io import StringIO
 from firebase_admin import db
 import time  # Import the time module
+import re
 
 main = Blueprint('main', __name__)
 
@@ -60,54 +61,64 @@ def save_to_firebase(data, node_name):
         if col not in data.columns:
             raise ValueError(f"Missing required column '{col}' in {node_name} CSV.")
 
-    # Reference the Firebase node (ALL or VA)
-    ref = db.reference(node_name)
+    # Reference the Firebase Addresses node
+    ref = db.reference(node_name).child('Addresses')
 
-    # Count the number of entries added
-    entry_count = 0
-    apartment_count = 0  # For numbering apartments
+    # Batch updates for efficiency
+    batch_data = {}
 
-    # Loop through rows and save data
+    # Loop through rows and structure data
     for index, row in data.iterrows():
         # Replace NaN values with default or empty strings
         row = row.fillna('N/A')
 
         full_address = row['Full Address']
+        close_date = row['Close Date']
 
-        # Determine if it's an Apartment or a House
-        if "#" in full_address:
-            # Save under Apartment node with a numbered key
-            apartment_ref = ref.child('Apartment').child(str(apartment_count + 1))
-            apartment_ref.set({
-                'Full Address': full_address,
-                'Close Date': row['Close Date'],
-                'County': row['County'],
-                'City': row['City'],
-                'Street Name': row['Street Name'],
-                'State Or Province': row['State Or Province'],
-                'Street Number': row['Street Number'],
-                'Street Suffix': row['Street Suffix'],
-                'Zip Code': row['Zip Code']
-            })
-            apartment_count += 1
-        else:
-            # Save under House node with Full Address as the key
-            house_ref = ref.child('House').child(
-                full_address.replace('.', '').replace('$', '').replace('[', '').replace(']', '')
-            )  # Clean invalid characters
-            house_ref.set({
-                'Close Date': row['Close Date'],
-                'County': row['County'],
-                'City': row['City'],
-                'Street Name': row['Street Name'],
-                'State Or Province': row['State Or Province'],
-                'Street Number': row['Street Number'],
-                'Street Suffix': row['Street Suffix'],
-                'Zip Code': row['Zip Code']
-            })
-        entry_count += 1
+        # Determine the property type (Apartment or House)
+        property_type = "Apartment" if "#" in full_address else "House"
 
-    return entry_count
+        # Sanitize the Full Address for use as a Firebase key
+        sanitized_address = sanitize_address(full_address)
+
+        # Initialize the address node if not already in batch_data
+        if sanitized_address not in batch_data:
+            batch_data[sanitized_address] = {
+                "Details": {
+                    "Type": property_type,
+                    "Full Address": full_address,
+                    "County": row['County'],
+                    "City": row['City'],
+                    "Street Name": row['Street Name'],
+                    "State Or Province": row['State Or Province'],
+                    "Street Number": row['Street Number'],
+                    "Street Suffix": row['Street Suffix'],
+                    "Zip Code": row['Zip Code']
+                },
+                "CloseDates": []
+            }
+
+        # Merge Close Dates
+        current_close_dates = batch_data[sanitized_address]["CloseDates"]
+        if close_date not in current_close_dates:
+            current_close_dates.append(close_date)
+            batch_data[sanitized_address]["CloseDates"] = sorted(current_close_dates)
+
+    # Debugging: Log batch data to verify completeness
+    print(f"Total entries to write: {len(batch_data)}")
+
+    # Perform a single batch write
+    ref.update(batch_data)
+
+    return len(batch_data)
+
+
+def sanitize_address(address): # used for apartment parsing
+    """
+    Sanitize an address by removing '#' to make it valid as a Firebase key.
+    """
+    return address.replace('#', '')
+
 
 @main.route('/finished')
 def finished():
