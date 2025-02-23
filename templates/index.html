@@ -54,6 +54,27 @@
             align-items: center;
         }
 
+        .file-info {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #555;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .remove-file {
+            color: red;
+            font-size: 20px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .remove-file:hover {
+            text-decoration: underline;
+        }
+        
         .file-input-wrapper {
             display: flex;
             align-items: center;
@@ -161,6 +182,14 @@
             }
         }
 
+        .wipe-button {
+            background-color: #E74C3C;
+        }
+
+        .wipe-button:hover {
+            background-color: #C0392B;
+        }
+        
         .spinner-text {
             margin-top: 10px;
             color: #fff;
@@ -176,21 +205,18 @@
         <img src="{{ url_for('static', filename='logo.png') }}" alt="Project Dagger Logo" class="logo">
         <h1>Welcome to Project Dagger</h1>
         <p>Upload your CSV files below to start processing data. Ensure both files are valid and in the correct format.</p>
-        <form action="/upload_csvs" method="POST" enctype="multipart/form-data" onsubmit="showOverlay()">
+        <form action="/upload_csv" method="POST" enctype="multipart/form-data" onsubmit="showOverlay()">
             <div class="file-input-wrapper">
-                <button type="button" class="upload-btn" onclick="document.getElementById('csv1').click();">Upload All Records CSV</button>
-                <input type="file" name="csv1" id="csv1" onchange="updateFileName('csv1-name', this.files)">
-                <span id="csv1-name" class="file-name">No file selected</span>
-                <button type="button" class="remove-btn" onclick="removeFile('csv1', 'csv1-name')">X</button>
-            </div>
-            <div class="file-input-wrapper">
-                <button type="button" class="upload-btn" onclick="document.getElementById('csv2').click();">Upload VA Loan Records CSV</button>
-                <input type="file" name="csv2" id="csv2" onchange="updateFileName('csv2-name', this.files)">
-                <span id="csv2-name" class="file-name">No file selected</span>
-                <button type="button" class="remove-btn" onclick="removeFile('csv2', 'csv2-name')">X</button>
-            </div>
+                <label for="csv" class="upload-btn">Choose CSV File</label>
+                <input type="file" name="csv" id="csv" accept=".csv" onchange="displayFileName(this)">
+                <div id="file-info" class="file-info" style="display: none;">
+                    <span id="file-name">No file selected</span>
+                    <span class="remove-file" onclick="removeFile()">✖</span>
+                </div>
+            </div>            
             <button type="submit" class="submit-button">Submit Files</button>
         </form>
+        <button onclick="wipeDatabase()" class="wipe-button">Wipe Database</button>
         <footer>&copy; 2024 Foxtrot Company. All Rights Reserved.</footer>
     </div>
 
@@ -210,13 +236,35 @@
             }
         }
 
-        function removeFile(inputId, nameId) {
-            const fileInput = document.getElementById(inputId);
-            const fileNameElement = document.getElementById(nameId);
-            fileInput.value = ""; // Clear the file input
-            fileNameElement.textContent = "No file selected"; // Reset the file name display
+        function displayFileName(input) {
+            const fileInfo = document.getElementById('file-info');
+            const fileName = document.getElementById('file-name');
+            if (input.files && input.files[0]) {
+                fileName.textContent = input.files[0].name;
+                fileInfo.style.display = 'flex';
+            }
         }
 
+        function wipeDatabase() {
+            if (confirm("Are you sure you want to wipe the entire database? This action cannot be undone.")) {
+                fetch('/wipe_database', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        alert(data.message || "Database wiped successfully.");
+                    })
+                    .catch(error => {
+                        alert("Error wiping database: " + error.message);
+                    });
+            }
+        }
+
+        function removeFile() {
+            const input = document.getElementById('csv');
+            const fileInfo = document.getElementById('file-info');
+            input.value = '';  // Clear the file input
+            fileInfo.style.display = 'none';  // Hide file info
+        }
+    
         function showOverlay() {
             document.getElementById('overlay').classList.add('active');
         }
