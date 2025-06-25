@@ -3,3 +3,4 @@ uploads/
 firebase_config.json
 firebase_init.py
 logo.png
+static/logo.png
