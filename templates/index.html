@@ -207,13 +207,15 @@
         <p>Upload your CSV files below to start processing data. Ensure both files are valid and in the correct format.</p>
         <form action="/upload_csv" method="POST" enctype="multipart/form-data" onsubmit="showOverlay()">
             <div class="file-input-wrapper">
-                <label for="csv" class="upload-btn">Choose CSV File</label>
-                <input type="file" name="csv" id="csv" accept=".csv" onchange="displayFileName(this)">
-                <div id="file-info" class="file-info" style="display: none;">
-                    <span id="file-name">No file selected</span>
-                    <span class="remove-file" onclick="removeFile()">✖</span>
-                </div>
-            </div>            
+                <label for="csv1" class="upload-btn">Choose First CSV File</label>
+                <input type="file" name="csv1" id="csv1" accept=".csv" required onchange="displayFileName(this, 'file-name1')">
+                <span id="file-name1">No file selected</span>
+            </div>
+            <div class="file-input-wrapper">
+                <label for="csv2" class="upload-btn">Choose Second CSV File</label>
+                <input type="file" name="csv2" id="csv2" accept=".csv" required onchange="displayFileName(this, 'file-name2')">
+                <span id="file-name2">No file selected</span>
+            </div>
             <button type="submit" class="submit-button">Submit Files</button>
         </form>
         <button onclick="wipeDatabase()" class="wipe-button">Wipe Database</button>
@@ -227,21 +229,12 @@
     </div>
 
     <script>
-        function updateFileName(elementId, files) {
-            const fileNameElement = document.getElementById(elementId);
-            if (files.length > 0) {
-                fileNameElement.textContent = files[0].name;
-            } else {
-                fileNameElement.textContent = "No file selected";
-            }
-        }
-
-        function displayFileName(input) {
-            const fileInfo = document.getElementById('file-info');
-            const fileName = document.getElementById('file-name');
+        function displayFileName(input, spanId) {
+            const fileName = document.getElementById(spanId);
             if (input.files && input.files[0]) {
                 fileName.textContent = input.files[0].name;
-                fileInfo.style.display = 'flex';
+            } else {
+                fileName.textContent = "No file selected";
             }
         }
 
@@ -258,13 +251,6 @@
             }
         }
 
-        function removeFile() {
-            const input = document.getElementById('csv');
-            const fileInfo = document.getElementById('file-info');
-            input.value = '';  // Clear the file input
-            fileInfo.style.display = 'none';  // Hide file info
-        }
-    
         function showOverlay() {
             document.getElementById('overlay').classList.add('active');
         }

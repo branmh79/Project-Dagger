@@ -19,26 +19,30 @@ def index():
 def upload_csvs():
     start_time = time.time()  # Start the timer
 
-    # Retrieve file from the request
-    uploaded_file = request.files.get('csv')
+    # Retrieve both files from the request
+    uploaded_file1 = request.files.get('csv1')
+    uploaded_file2 = request.files.get('csv2')
 
-    if not uploaded_file or not uploaded_file.filename.endswith('.csv'):
-        return jsonify({'error': 'A CSV file is required.'}), 400
+    if not uploaded_file1 or not uploaded_file2:
+        return jsonify({'error': 'Two CSV files are required.'}), 400
 
-    # Read the file into a DataFrame in chunks for batching
+    # Now you can process both files as needed
+    # Example: read both into DataFrames
     try:
-        chunks = pd.read_csv(
-            StringIO(uploaded_file.read().decode('utf-8')), 
-            dtype=str,  # Treat all columns as strings
-            low_memory=False,
-            chunksize=2000  # Process 1000 rows at a time
-        )
+        df1 = pd.read_csv(StringIO(uploaded_file1.read().decode('utf-8')), dtype=str, low_memory=False)
+        df2 = pd.read_csv(StringIO(uploaded_file2.read().decode('utf-8')), dtype=str, low_memory=False)
     except Exception as e:
-        return jsonify({'error': f'Error reading CSV file: {str(e)}'}), 400
+        return jsonify({'error': f'Error reading CSV files: {str(e)}'}), 400
 
     # Save data to Firebase in batches
     total_entries = 0
-    for chunk in chunks:
+    for chunk in df1:
+        try:
+            total_entries += save_to_firebase(chunk, "RealEstate")
+        except Exception as e:
+            return jsonify({'error': f'Error saving to Firebase: {str(e)}'}), 500
+
+    for chunk in df2:
         try:
             total_entries += save_to_firebase(chunk, "RealEstate")
         except Exception as e:
