@@ -1,3 +1,4 @@
 __pycache__/
 uploads/
 firebase_config.json
+.env

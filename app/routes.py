@@ -19,30 +19,26 @@ def index():
 def upload_csvs():
     start_time = time.time()  # Start the timer
 
-    # Retrieve both files from the request
-    uploaded_file1 = request.files.get('csv1')
-    uploaded_file2 = request.files.get('csv2')
+    # Retrieve file from the request
+    uploaded_file = request.files.get('csv')
 
-    if not uploaded_file1 or not uploaded_file2:
-        return jsonify({'error': 'Two CSV files are required.'}), 400
+    if not uploaded_file or not uploaded_file.filename.endswith('.csv'):
+        return jsonify({'error': 'A CSV file is required.'}), 400
 
-    # Now you can process both files as needed
-    # Example: read both into DataFrames
+    # Read the file into a DataFrame in chunks for batching
     try:
-        df1 = pd.read_csv(StringIO(uploaded_file1.read().decode('utf-8')), dtype=str, low_memory=False)
-        df2 = pd.read_csv(StringIO(uploaded_file2.read().decode('utf-8')), dtype=str, low_memory=False)
+        chunks = pd.read_csv(
+            StringIO(uploaded_file.read().decode('utf-8')), 
+            dtype=str,  # Treat all columns as strings
+            low_memory=False,
+            chunksize=2000  # Process 1000 rows at a time
+        )
     except Exception as e:
-        return jsonify({'error': f'Error reading CSV files: {str(e)}'}), 400
+        return jsonify({'error': f'Error reading CSV file: {str(e)}'}), 400
 
     # Save data to Firebase in batches
     total_entries = 0
-    for chunk in df1:
-        try:
-            total_entries += save_to_firebase(chunk, "RealEstate")
-        except Exception as e:
-            return jsonify({'error': f'Error saving to Firebase: {str(e)}'}), 500
-
-    for chunk in df2:
+    for chunk in chunks:
         try:
             total_entries += save_to_firebase(chunk, "RealEstate")
         except Exception as e:
@@ -107,7 +103,7 @@ def populate_filtered_va_data():
 
     for address, entries in data.items():
         # Sort entries by CloseDate in descending order (latest first)
-        entries = sorted(entries, key=lambda x: pd.to_datetime(x['CloseDate'], errors='coerce'), reverse=True)
+        entries = sorted(entries, key=lambda x: pd.to_datetime(x.get('CloseDate', ''), errors='coerce'), reverse=True)
 
         # Get the most recent entry
         most_recent_entry = entries[0] if entries else None
@@ -117,7 +113,7 @@ def populate_filtered_va_data():
             continue
 
         # Check if the most recent entry has BuyerFinancing as "VA"
-        if most_recent_entry['BuyerFinancing'] == 'VA':
+        if most_recent_entry.get('BuyerFinancing', '') == 'VA':
             # Only include the most recent entry if BuyerFinancing is VA
             filtered_data[address] = [most_recent_entry]
 
@@ -413,4 +409,3 @@ def wipe_database():
         return jsonify({"message": "Database wiped successfully."}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
