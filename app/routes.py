@@ -18,12 +18,15 @@ def index():
 @main.route('/upload_csv', methods=['POST'])
 def upload_csvs():
     start_time = time.time()  # Start the timer
+    print("Starting CSV upload process...")
 
     # Retrieve file from the request
     uploaded_file = request.files.get('csv')
 
     if not uploaded_file or not uploaded_file.filename.endswith('.csv'):
         return jsonify({'error': 'A CSV file is required.'}), 400
+
+    print(f"Processing file: {uploaded_file.filename}")
 
     # Read the file into a DataFrame in chunks for batching
     try:
@@ -33,25 +36,34 @@ def upload_csvs():
             low_memory=False,
             chunksize=2000  # Process 1000 rows at a time
         )
+        print("CSV file read successfully, starting batch processing...")
     except Exception as e:
         return jsonify({'error': f'Error reading CSV file: {str(e)}'}), 400
 
     # Save data to Firebase in batches
     total_entries = 0
+    chunk_count = 0
     for chunk in chunks:
+        chunk_count += 1
+        print(f"Processing chunk {chunk_count}...")
         try:
             total_entries += save_to_firebase(chunk, "RealEstate")
         except Exception as e:
             return jsonify({'error': f'Error saving to Firebase: {str(e)}'}), 500
 
+    print(f"All chunks processed. Total entries: {total_entries}")
+
     # Filter data and populate a new node for exporting
+    print("Starting VA data filtering...")
     try:
         filtered_count = populate_filtered_va_data()
+        print(f"VA filtering complete. Filtered entries: {filtered_count}")
     except Exception as e:
         return jsonify({'error': f'Error populating filtered VA data: {str(e)}'}), 500
 
     end_time = time.time()  # Stop the timer
     duration = end_time - start_time  # Calculate the duration in seconds
+    print(f"Total processing time: {duration:.2f} seconds")
 
     # Redirect to finished after all operations
     return redirect(url_for('main.finished', time_taken=duration, entries=total_entries, current_va_count=filtered_count))
@@ -92,33 +104,56 @@ def save_to_firebase(data, node_name, batch_size=500):
 
 
 
+def safe_to_datetime(val):
+    """Safely convert a value to datetime, handling various data types."""
+    try:
+        if isinstance(val, str) and val.strip():
+            return pd.to_datetime(val, errors='coerce')
+        elif pd.isna(val) or val == '' or val is None:
+            return pd.NaT
+        else:
+            return pd.to_datetime(str(val), errors='coerce')
+    except Exception as e:
+        print(f"Error converting to datetime: {val} (type: {type(val)}) - {e}")
+        return pd.NaT
+
 def populate_filtered_va_data():
     # Reference the RealEstate node
     ref = db.reference('RealEstate')
     data = ref.get() or {}
+    print(f"Retrieved {len(data)} addresses from Firebase")
 
     # Reference the FilteredVA node
     filtered_ref = db.reference('FilteredVA')
     filtered_data = {}
 
     for address, entries in data.items():
-        # Sort entries by CloseDate in descending order (latest first)
-        entries = sorted(entries, key=lambda x: pd.to_datetime(x.get('CloseDate', ''), errors='coerce'), reverse=True)
+        try:
+            # Sort entries by CloseDate in descending order (latest first)
+            entries = sorted(
+                entries, 
+                key=lambda x: safe_to_datetime(x.get('CloseDate', '')), 
+                reverse=True
+            )
 
-        # Get the most recent entry
-        most_recent_entry = entries[0] if entries else None
+            # Get the most recent entry
+            most_recent_entry = entries[0] if entries else None
 
-        # Skip the address if there's no valid recent entry
-        if not most_recent_entry:
+            # Skip the address if there's no valid recent entry
+            if not most_recent_entry:
+                continue
+
+            # Check if the most recent entry has BuyerFinancing as "VA"
+            if most_recent_entry.get('BuyerFinancing', '') == 'VA':
+                # Only include the most recent entry if BuyerFinancing is VA
+                filtered_data[address] = [most_recent_entry]
+        except Exception as e:
+            print(f"Error processing address {address}: {e}")
             continue
-
-        # Check if the most recent entry has BuyerFinancing as "VA"
-        if most_recent_entry.get('BuyerFinancing', '') == 'VA':
-            # Only include the most recent entry if BuyerFinancing is VA
-            filtered_data[address] = [most_recent_entry]
 
     # Write the filtered data back to Firebase
     filtered_ref.set(filtered_data)
+    print(f"Filtered VA data written to Firebase: {len(filtered_data)} addresses")
     return len(filtered_data)
 
 
